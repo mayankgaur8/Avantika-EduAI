@@ -46,6 +46,14 @@ app.use("/api/billing", billingRouter);
 app.use("/api/payment", paymentRouter);
 app.use("/api/admin", adminRouter);
 
+app.get("/api/debug/routes", (req, res) => {
+  res.json({
+    routes: app._router.stack
+      .filter((r) => r.route)
+      .map((r) => r.route.path),
+  });
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, error: "Route not found" });
