@@ -1,6 +1,9 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.NEXT_PUBLIC_API_URL ||
+  "https://avantika-interview-api-d0hubeg6exgwbgg3.centralindia-01.azurewebsites.net";
 
 const api = axios.create({
   baseURL: `${API_BASE}/api`,
