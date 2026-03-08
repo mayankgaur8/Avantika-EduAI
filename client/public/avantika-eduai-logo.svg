@@ -1,0 +1,19 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7E22CE"/>
+      <stop offset="100%" stop-color="#A21CAF"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="248" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="220" stroke="#FBBF24" stroke-width="18" fill="none"/>
+  <circle cx="256" cy="256" r="148" fill="#F8FAFC" stroke="#8B5CF6" stroke-width="10"/>
+  <text x="256" y="102" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="56" font-weight="700">AVANTIKA</text>
+  <text x="256" y="434" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="72" font-weight="700">EDUAI</text>
+  <g>
+    <rect x="214" y="252" width="84" height="110" rx="22" fill="#6B4F2A"/>
+    <circle cx="256" cy="228" r="76" fill="#22C55E"/>
+    <circle cx="204" cy="238" r="36" fill="#16A34A"/>
+    <circle cx="308" cy="238" r="36" fill="#16A34A"/>
+  </g>
+</svg>
