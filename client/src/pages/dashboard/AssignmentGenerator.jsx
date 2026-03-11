@@ -75,7 +75,7 @@ export default function AssignmentGenerator() {
       const res = await api.post(
         "/assignment/generate",
         { ...form, marks: Number(form.marks), numberOfQuestions: Number(form.numberOfQuestions) },
-        { timeout: 120000 }
+        { timeout: 300000 }
       );
       setResult(res.data.data);
       toast.success("Assignment generated!");

@@ -48,7 +48,7 @@ async function callOllama(systemPrompt, userPrompt) {
   const prompt = `${systemPrompt}\n\n${userPrompt}`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 180_000); // 3 min timeout
+  const timeout = setTimeout(() => controller.abort(), 300_000); // 5 min timeout
 
   let response;
   try {
