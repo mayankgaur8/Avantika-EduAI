@@ -117,11 +117,9 @@ router.get("/history", async (req, res) => {
     );
     res.json({ success: true, data: result.rows });
   } catch (err) {
-    // Graceful fallback for environments where assignments table is not migrated yet.
-    if (err?.code === "42P01") {
-      return res.json({ success: true, data: [], warning: "Assignments table not found in DB." });
-    }
-    res.status(500).json({ success: false, error: "Failed to fetch assignments" });
+    // Graceful fallback for any DB schema issues (table/column missing, etc.)
+    console.error("[Assignment History Error]", err.code, err.message);
+    return res.json({ success: true, data: [], warning: "Could not load history: " + err.message });
   }
 });
 

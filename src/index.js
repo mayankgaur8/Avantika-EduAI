@@ -11,6 +11,7 @@ const billingRouter = require("./routes/billing");
 const paymentRouter = require("./routes/payment");
 const adminRouter = require("./routes/admin");
 const { authMiddleware } = require("./middleware/auth");
+const { query } = require("./db/client");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,6 +68,45 @@ app.use((err, req, res, next) => {
 
 // ── Start ────────────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
+async function ensureTables() {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS assignments (
+        id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id     UUID        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        subject     TEXT        NOT NULL,
+        topic       TEXT        NOT NULL,
+        grade       TEXT        NOT NULL,
+        total_marks INT         NOT NULL,
+        difficulty  TEXT        NOT NULL,
+        raw_json    JSONB       NOT NULL,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_assignments_user_id ON assignments (user_id)`);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS question_papers (
+        id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id          UUID        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        subject          TEXT        NOT NULL,
+        grade            TEXT        NOT NULL,
+        board            TEXT        NOT NULL DEFAULT 'CBSE',
+        total_marks      INT         NOT NULL,
+        duration_minutes INT         NOT NULL,
+        raw_json         JSONB       NOT NULL,
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_papers_user_id ON question_papers (user_id)`);
+
+    console.log("[DB] Tables verified/created.");
+  } catch (err) {
+    console.error("[DB] Table migration warning:", err.message);
+  }
+}
+
+app.listen(PORT, async () => {
   console.log(`Avantika EduAI API v2.0 running on port ${PORT}`);
+  await ensureTables();
 });
