@@ -8,7 +8,6 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: avantika-eduai-api
-  AZURE_WEBAPP_PACKAGE_PATH: .
   NODE_VERSION: '20.x'
 
 jobs:
@@ -32,16 +31,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify app entry file exists
-        run: test -f src/index.js
+      - name: Prune dev dependencies
+        run: npm prune --omit=dev
 
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: node-app
           path: |
-            .
-            !node_modules
+            src
+            db
+            package.json
+            package-lock.json
+            .env.example
+            node_modules
 
   deploy:
     runs-on: ubuntu-latest
