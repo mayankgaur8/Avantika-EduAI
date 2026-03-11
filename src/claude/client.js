@@ -47,16 +47,29 @@ async function callOllama(systemPrompt, userPrompt) {
   const model = process.env.OLLAMA_MODEL?.trim() || DEFAULT_OLLAMA_MODEL;
   const prompt = `${systemPrompt}\n\n${userPrompt}`;
 
-  const response = await fetch(`${baseUrl}/api/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      prompt,
-      stream: false,
-      format: "json",
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 180_000); // 3 min timeout
+
+  let response;
+  try {
+    response = await fetch(`${baseUrl}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        prompt,
+        stream: false,
+        format: "json",
+      }),
+    });
+  } catch (fetchErr) {
+    const err = new Error(`Ollama unreachable: ${fetchErr.message}`);
+    err.code = "UPSTREAM_ERROR";
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const body = await response.text();
