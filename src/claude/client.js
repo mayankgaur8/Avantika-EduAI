@@ -1,10 +1,10 @@
-const Anthropic = require("@anthropic-ai/sdk");
+const OpenAI = require("openai");
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6";
+const DEFAULT_OPENAI_MODEL = "gpt-4.1-mini";
 const DEFAULT_OLLAMA_MODEL = "llama3.1";
 const DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
 
@@ -15,24 +15,33 @@ function extractJson(rawText) {
   return JSON.parse(jsonString);
 }
 
-async function callAnthropic(systemPrompt, userPrompt) {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey || apiKey === "your_anthropic_api_key_here") {
-    const err = new Error("ANTHROPIC_API_KEY is missing or still using placeholder value.");
+async function callOpenAI(systemPrompt, userPrompt) {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey || apiKey === "your_openai_api_key_here") {
+    const err = new Error("OPENAI_API_KEY is missing or still using placeholder value.");
     err.code = "CONFIG_ERROR";
     throw err;
   }
 
-  const model = process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
+  const model = process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
 
-  const message = await anthropic.messages.create({
+  const completion = await openai.chat.completions.create({
     model,
+    temperature: 0.2,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
     max_tokens: 4096,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
   });
 
-  const rawText = message.content[0].text;
+  const rawText = completion.choices?.[0]?.message?.content?.trim();
+  if (!rawText) {
+    const err = new Error("OpenAI returned an empty response.");
+    err.code = "UPSTREAM_ERROR";
+    throw err;
+  }
+
   return extractJson(rawText);
 }
 
@@ -69,24 +78,20 @@ async function callOllama(systemPrompt, userPrompt) {
   return extractJson(payload.response);
 }
 
-/**
- * Calls Claude API with a given prompt and returns parsed JSON.
- * Throws if the response is not valid JSON.
- */
-async function callClaude(systemPrompt, userPrompt) {
-  const provider = (process.env.AI_PROVIDER || "anthropic").trim().toLowerCase();
+async function callLLM(systemPrompt, userPrompt) {
+  const provider = (process.env.AI_PROVIDER || "openai").trim().toLowerCase();
 
   if (provider === "ollama") {
     return callOllama(systemPrompt, userPrompt);
   }
 
-  if (provider !== "anthropic") {
-    const err = new Error("AI_PROVIDER must be either `anthropic` or `ollama`.");
+  if (provider !== "openai") {
+    const err = new Error("AI_PROVIDER must be either `openai` or `ollama`.");
     err.code = "CONFIG_ERROR";
     throw err;
   }
 
-  return callAnthropic(systemPrompt, userPrompt);
+  return callOpenAI(systemPrompt, userPrompt);
 }
 
-module.exports = { callClaude };
+module.exports = { callLLM };

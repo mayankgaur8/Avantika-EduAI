@@ -6,7 +6,7 @@ const { buildPdfHtml } = require("./template");
 /**
  * Generates a PDF buffer from a quiz object.
  *
- * @param {Object} quiz              - Quiz JSON (from Claude or DB)
+ * @param {Object} quiz              - Quiz JSON (from model output or DB)
  * @param {Object} options
  * @param {boolean} options.includeAnswers - true = answer key edition
  * @param {string}  options.schoolName    - Printed in the header

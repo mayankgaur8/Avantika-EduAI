@@ -1,6 +1,6 @@
 const express = require("express");
 const { z } = require("zod");
-const { callClaude } = require("../claude/client");
+const { callLLM } = require("../claude/client");
 const { authMiddleware } = require("../middleware/auth");
 const { query } = require("../db/client");
 
@@ -61,7 +61,7 @@ router.post("/generate", async (req, res) => {
 Distribute marks proportionally across ${numberOfQuestions} questions. Include answer guidelines.`;
 
   try {
-    const assignment = await callClaude(ASSIGNMENT_SYSTEM_PROMPT, userPrompt);
+    const assignment = await callLLM(ASSIGNMENT_SYSTEM_PROMPT, userPrompt);
 
     // Save to DB
     const saved = await query(

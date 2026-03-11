@@ -104,7 +104,7 @@ function renderAnswerKey(answerKey) {
 
 /**
  * Generates the full HTML for the PDF.
- * @param {Object} quiz      - The quiz JSON from Claude / DB
+ * @param {Object} quiz      - The quiz JSON from model output / DB
  * @param {Object} options
  * @param {boolean} options.includeAnswers  - Include answer key + explanations
  * @param {string}  options.schoolName      - Optional school name in header

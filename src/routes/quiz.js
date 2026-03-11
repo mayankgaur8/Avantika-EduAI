@@ -1,6 +1,6 @@
 const express = require("express");
 const { z } = require("zod");
-const { callClaude } = require("../claude/client");
+const { callLLM } = require("../claude/client");
 const { QUIZ_SYSTEM_PROMPT, buildQuizPrompt } = require("../claude/prompts");
 const {
   saveQuiz,
@@ -82,9 +82,9 @@ router.post("/generate", async (req, res) => {
   }
 
   try {
-    // 3. Build prompt & call Claude
+    // 3. Build prompt & call LLM
     const userPrompt = buildQuizPrompt(input);
-    const quiz = await callClaude(QUIZ_SYSTEM_PROMPT, userPrompt);
+    const quiz = await callLLM(QUIZ_SYSTEM_PROMPT, userPrompt);
 
     // 4. Persist to DB if user is authenticated
     let savedQuizId = null;
@@ -217,7 +217,7 @@ router.get("/:id/pdf", async (req, res) => {
     return res.status(404).json({ success: false, error: "Quiz not found" });
   }
 
-  // raw_json has the full Claude output; fall back to the DB row itself
+  // raw_json has the full model output; fall back to the DB row itself
   const quizData = quiz.raw_json || quiz;
   const includeAnswers = req.query.answers === "true";
   const schoolName = req.query.school || "";

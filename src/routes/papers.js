@@ -1,6 +1,6 @@
 const express = require("express");
 const { z } = require("zod");
-const { callClaude } = require("../claude/client");
+const { callLLM } = require("../claude/client");
 const { authMiddleware } = require("../middleware/auth");
 const { query } = require("../db/client");
 const { generateQuizPdf } = require("../pdf/generator");
@@ -94,7 +94,7 @@ router.post("/generate", async (req, res) => {
 Include general instructions and section-specific instructions. Provide answer keys.`;
 
   try {
-    const paper = await callClaude(PAPER_SYSTEM_PROMPT, userPrompt);
+    const paper = await callLLM(PAPER_SYSTEM_PROMPT, userPrompt);
 
     const saved = await query(
       `INSERT INTO question_papers (user_id, subject, grade, board, total_marks, duration_minutes, raw_json)

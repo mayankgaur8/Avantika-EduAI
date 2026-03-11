@@ -3,7 +3,7 @@ import { useState } from "react";
 import BrandLogo from "../components/BrandLogo";
 
 const features = [
-  { icon: "⚡", title: "Instant Generation", desc: "Generate complete question papers in under 30 seconds using Claude AI" },
+  { icon: "⚡", title: "Instant Generation", desc: "Generate complete question papers in under 30 seconds using OpenAI" },
   { icon: "🎯", title: "Board Aligned", desc: "Perfectly aligned with CBSE, ICSE, JEE, and NEET syllabi and patterns" },
   { icon: "📄", title: "PDF Export", desc: "Download professional PDF question papers ready for printing" },
   { icon: "✏️", title: "Edit & Customize", desc: "Edit any question, adjust marks, and reuse templates anytime" },
@@ -14,7 +14,7 @@ const features = [
 const steps = [
   { step: "01", title: "Sign Up Free", desc: "Create your account in 30 seconds. No credit card required." },
   { step: "02", title: "Fill the Form", desc: "Select subject, class, board, difficulty, and question type." },
-  { step: "03", title: "AI Generates", desc: "Our Claude AI instantly creates a complete question paper with answers." },
+  { step: "03", title: "AI Generates", desc: "Our OpenAI-powered engine instantly creates a complete question paper with answers." },
   { step: "04", title: "Download PDF", desc: "Export as PDF and share with students immediately." },
 ];
 

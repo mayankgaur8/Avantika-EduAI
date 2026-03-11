@@ -58,7 +58,7 @@ CREATE TABLE quizzes (
   question_type    question_type NOT NULL,
   total_questions  INT           NOT NULL CHECK (total_questions BETWEEN 1 AND 30),
 
-  -- full Claude response stored for rendering / re-use
+  -- full model response stored for rendering / re-use
   raw_json         JSONB         NOT NULL,
 
   created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
@@ -100,7 +100,7 @@ CREATE TABLE usage_logs (
   user_id     UUID        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   action      TEXT        NOT NULL DEFAULT 'quiz_generate',
   quiz_id     UUID        REFERENCES quizzes (id) ON DELETE SET NULL,
-  tokens_used INT,                                  -- Claude input + output tokens
+  tokens_used INT,                                  -- model input + output tokens
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

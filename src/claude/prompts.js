@@ -1,5 +1,5 @@
 /**
- * System prompt that defines Claude's role as an Indian education expert.
+ * System prompt that defines the model's role as an Indian education expert.
  */
 const QUIZ_SYSTEM_PROMPT = `You are an expert AI teaching assistant for Indian schools, coaching institutes, and exam preparation centers.
 
