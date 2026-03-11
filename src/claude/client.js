@@ -1,9 +1,5 @@
 const OpenAI = require("openai");
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const DEFAULT_OPENAI_MODEL = "gpt-4.1-mini";
 const DEFAULT_OLLAMA_MODEL = "llama3.1";
 const DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
@@ -24,6 +20,7 @@ async function callOpenAI(systemPrompt, userPrompt) {
   }
 
   const model = process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
+  const openai = new OpenAI({ apiKey });
 
   const completion = await openai.chat.completions.create({
     model,
