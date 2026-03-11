@@ -14,6 +14,7 @@ const { authMiddleware } = require("./middleware/auth");
 const { query } = require("./db/client");
 
 const app = express();
+app.set("trust proxy", 1); // Required for express-rate-limit behind Azure/nginx proxy
 const PORT = process.env.PORT || 3000;
 
 // ── Middleware ───────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ async function ensureTables() {
     await query(`
       CREATE TABLE IF NOT EXISTS assignments (
         id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id     UUID        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        user_id     UUID        NOT NULL,
         subject     TEXT        NOT NULL,
         topic       TEXT        NOT NULL,
         grade       TEXT        NOT NULL,
@@ -88,7 +89,7 @@ async function ensureTables() {
     await query(`
       CREATE TABLE IF NOT EXISTS question_papers (
         id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id          UUID        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+        user_id          UUID        NOT NULL,
         subject          TEXT        NOT NULL,
         grade            TEXT        NOT NULL,
         board            TEXT        NOT NULL DEFAULT 'CBSE',
