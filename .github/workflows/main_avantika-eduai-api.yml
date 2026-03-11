@@ -10,7 +10,6 @@ env:
   AZURE_WEBAPP_NAME: avantika-eduai-api
   AZURE_WEBAPP_PACKAGE_PATH: ./release
   NODE_VERSION: '20.x'
-  BACKEND_PATH: ./backend
 
 jobs:
   build:
@@ -28,22 +27,20 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: ${{ env.BACKEND_PATH }}/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install backend dependencies
-        working-directory: ${{ env.BACKEND_PATH }}
+      - name: Install dependencies
         run: npm ci
 
-      - name: Build NestJS backend
-        working-directory: ${{ env.BACKEND_PATH }}
+      - name: Build NestJS app
         run: npm run build
 
       - name: Prepare deployment package
         run: |
           mkdir -p release
-          cp -r ${{ env.BACKEND_PATH }}/dist release/dist
-          cp ${{ env.BACKEND_PATH }}/package.json release/package.json
-          cp ${{ env.BACKEND_PATH }}/package-lock.json release/package-lock.json
+          cp -r dist release/dist
+          cp package.json release/package.json
+          cp package-lock.json release/package-lock.json
 
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
