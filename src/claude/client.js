@@ -79,7 +79,7 @@ async function callOllama(systemPrompt, userPrompt) {
 }
 
 async function callLLM(systemPrompt, userPrompt) {
-  const provider = (process.env.AI_PROVIDER || "openai").trim().toLowerCase();
+  const provider = (process.env.AI_PROVIDER || "ollama").trim().toLowerCase();
 
   if (provider === "ollama") {
     return callOllama(systemPrompt, userPrompt);
