@@ -65,13 +65,28 @@ export default function AssignmentGenerator() {
   const handleGenerate = async (e) => {
     e.preventDefault();
     if (!form.topic.trim()) { toast.error("Please enter a topic"); return; }
+    if (!navigator.onLine) {
+      toast.error("You appear to be offline. Please check your internet connection.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await api.post("/assignment/generate", { ...form, marks: Number(form.marks), numberOfQuestions: Number(form.numberOfQuestions) });
+      const res = await api.post(
+        "/assignment/generate",
+        { ...form, marks: Number(form.marks), numberOfQuestions: Number(form.numberOfQuestions) },
+        { timeout: 120000 }
+      );
       setResult(res.data.data);
       toast.success("Assignment generated!");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Generation failed");
+      if (err.code === "ERR_NETWORK") {
+        toast.error("Network error. Please check your internet connection.");
+      } else if (err.code === "ECONNABORTED") {
+        toast.error("Request timed out. Please try again.");
+      } else {
+        toast.error(err.response?.data?.error || "Generation failed");
+      }
     } finally { setLoading(false); }
   };
 
