@@ -1,4 +1,4 @@
-name: Build and deploy NestJS backend to Azure Web App - avantika-eduai-api
+name: Build and deploy Node.js app to Azure Web App - avantika-eduai-api
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: avantika-eduai-api
-  AZURE_WEBAPP_PACKAGE_PATH: ./release
+  AZURE_WEBAPP_PACKAGE_PATH: .
   NODE_VERSION: '20.x'
 
 jobs:
@@ -32,21 +32,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build NestJS app
-        run: npm run build
-
-      - name: Prepare deployment package
-        run: |
-          mkdir -p release
-          cp -r dist release/dist
-          cp package.json release/package.json
-          cp package-lock.json release/package-lock.json
+      - name: Verify app entry file exists
+        run: test -f src/index.js
 
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          path: |
+            .
+            !node_modules
 
   deploy:
     runs-on: ubuntu-latest
@@ -61,7 +56,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -75,4 +69,4 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: Production
-          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          package: .
