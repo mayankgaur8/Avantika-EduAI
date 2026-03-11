@@ -63,16 +63,46 @@ Distribute marks proportionally across ${numberOfQuestions} questions. Include a
   try {
     const assignment = await callLLM(ASSIGNMENT_SYSTEM_PROMPT, userPrompt);
 
-    // Save to DB
-    const saved = await query(
-      `INSERT INTO assignments (user_id, subject, topic, grade, total_marks, difficulty, raw_json)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`,
-      [req.user.id, subject, topic, grade, marks, difficulty, JSON.stringify(assignment)]
-    );
+    let savedMeta = { id: null, created_at: new Date().toISOString() };
+    let saveWarning = null;
 
-    res.json({ success: true, data: { ...assignment, id: saved.rows[0].id, created_at: saved.rows[0].created_at } });
+    try {
+      // Save to DB (non-blocking for generation success)
+      const saved = await query(
+        `INSERT INTO assignments (user_id, subject, topic, grade, total_marks, difficulty, raw_json)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`,
+        [req.user.id, subject, topic, grade, marks, difficulty, JSON.stringify(assignment)]
+      );
+      savedMeta = { id: saved.rows[0].id, created_at: saved.rows[0].created_at };
+    } catch (dbErr) {
+      console.error("[Assignment Save Error]", dbErr.message);
+      saveWarning = "Assignment generated but could not be saved to database.";
+    }
+
+    res.json({
+      success: true,
+      data: { ...assignment, ...savedMeta },
+      warning: saveWarning,
+    });
   } catch (err) {
-    console.error("[Assignment Generate Error]", err);
+    if (err?.code === "CONFIG_ERROR") {
+      return res.status(503).json({ success: false, error: err.message });
+    }
+    if (err?.code === "UPSTREAM_ERROR") {
+      console.error("[Assignment Upstream Error]", err.message);
+      return res.status(502).json({
+        success: false,
+        error: "LLM provider request failed. Check provider URL/model and try again.",
+      });
+    }
+    if (err instanceof SyntaxError) {
+      return res.status(502).json({
+        success: false,
+        error: "AI returned malformed JSON. Please retry.",
+      });
+    }
+
+    console.error("[Assignment Generate Error]", err.message || err);
     res.status(500).json({ success: false, error: "Failed to generate assignment" });
   }
 });
@@ -87,6 +117,10 @@ router.get("/history", async (req, res) => {
     );
     res.json({ success: true, data: result.rows });
   } catch (err) {
+    // Graceful fallback for environments where assignments table is not migrated yet.
+    if (err?.code === "42P01") {
+      return res.json({ success: true, data: [], warning: "Assignments table not found in DB." });
+    }
     res.status(500).json({ success: false, error: "Failed to fetch assignments" });
   }
 });
