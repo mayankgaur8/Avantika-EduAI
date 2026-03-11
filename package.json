@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "db:init": "psql $DATABASE_URL -f db/schema.sql"
+    "db:init": "psql $DATABASE_URL -f db/schema.sql",
+    "build": "echo \"No build step required\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
