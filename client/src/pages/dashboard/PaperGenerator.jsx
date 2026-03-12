@@ -93,7 +93,7 @@ export default function PaperGenerator() {
         mcqCount: Number(form.mcqCount),
         shortCount: Number(form.shortCount),
         longCount: Number(form.longCount),
-      });
+      }, { timeout: 300000 });
       setResult(res.data.data);
       toast.success("Question paper generated!");
     } catch (err) {

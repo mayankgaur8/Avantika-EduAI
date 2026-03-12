@@ -3,7 +3,6 @@ const { z } = require("zod");
 const { callLLM } = require("../claude/client");
 const { authMiddleware } = require("../middleware/auth");
 const { query } = require("../db/client");
-const { generateQuizPdf } = require("../pdf/generator");
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -96,15 +95,34 @@ Include general instructions and section-specific instructions. Provide answer k
   try {
     const paper = await callLLM(PAPER_SYSTEM_PROMPT, userPrompt);
 
-    const saved = await query(
-      `INSERT INTO question_papers (user_id, subject, grade, board, total_marks, duration_minutes, raw_json)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`,
-      [req.user.id, subject, grade, board, totalMarks, duration, JSON.stringify(paper)]
-    );
+    let savedMeta = { id: null, created_at: new Date().toISOString() };
+    let saveWarning = null;
 
-    res.json({ success: true, data: { ...paper, id: saved.rows[0].id, created_at: saved.rows[0].created_at } });
+    try {
+      const saved = await query(
+        `INSERT INTO question_papers (user_id, subject, grade, board, total_marks, duration_minutes, raw_json)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`,
+        [req.user.id, subject, grade, board, totalMarks, duration, JSON.stringify(paper)]
+      );
+      savedMeta = { id: saved.rows[0].id, created_at: saved.rows[0].created_at };
+    } catch (dbErr) {
+      console.error("[Paper Save Error]", dbErr.message);
+      saveWarning = "Paper generated but could not be saved to database.";
+    }
+
+    res.json({ success: true, data: { ...paper, ...savedMeta }, warning: saveWarning });
   } catch (err) {
-    console.error("[Paper Generate Error]", err);
+    if (err?.code === "CONFIG_ERROR") {
+      return res.status(503).json({ success: false, error: err.message });
+    }
+    if (err?.code === "UPSTREAM_ERROR") {
+      console.error("[Paper Upstream Error]", err.message);
+      return res.status(502).json({ success: false, error: "AI provider request failed. Check Ollama and try again." });
+    }
+    if (err instanceof SyntaxError) {
+      return res.status(502).json({ success: false, error: "AI returned malformed JSON. Please retry." });
+    }
+    console.error("[Paper Generate Error]", err.message || err);
     res.status(500).json({ success: false, error: "Failed to generate question paper" });
   }
 });
@@ -119,7 +137,8 @@ router.get("/history", async (req, res) => {
     );
     res.json({ success: true, data: result.rows });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Failed to fetch papers" });
+    console.error("[Paper History Error]", err.code, err.message);
+    return res.json({ success: true, data: [], warning: "Could not load history: " + err.message });
   }
 });
 
