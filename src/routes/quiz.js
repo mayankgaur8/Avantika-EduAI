@@ -46,10 +46,18 @@ const quizSchema = z.object({
     .int()
     .min(1, "Minimum 1 question")
     .max(30, "Maximum 30 questions per request"),
+  // ── Debug / diagnostic fields (no-op in production if not sent) ─────────
+  // model_preference: override OLLAMA_MODEL for this request, e.g. "phi3:mini"
+  model_preference: z.string().optional(),
+  // debug_raw: skip JSON parsing and return Ollama's raw text (for diagnosis)
+  debug_raw: z.boolean().optional(),
 });
 
 // ── POST /api/quiz/generate ──────────────────────────────────────────────────
 router.post("/generate", async (req, res) => {
+  const t0 = Date.now();
+  console.log(`[Quiz] REQUEST received — ${new Date().toISOString()}`);
+
   // 1. Validate input
   const parsed = quizSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -63,7 +71,10 @@ router.post("/generate", async (req, res) => {
     });
   }
 
-  const input = parsed.data;
+  // Extract debug/diagnostic options before passing to prompt builder
+  const { model_preference, debug_raw, ...coreInput } = parsed.data;
+  const input = coreInput;
+  console.log(`[Quiz] workflow=mcq_generation  model_preference=${model_preference || "default (env)"}  debug_raw=${!!debug_raw}`);
 
   // 2. Plan limit check (req.user set by auth middleware; skip if not present)
   const userId = req.user?.id ?? null;
@@ -82,26 +93,49 @@ router.post("/generate", async (req, res) => {
   }
 
   try {
-    // 3. Build prompt & call LLM
+    // 3. Build prompt
+    console.log(`[Quiz] building prompt … (+${Date.now() - t0} ms)`);
     const userPrompt = buildQuizPrompt(input);
-    const quiz = await callLLM(QUIZ_SYSTEM_PROMPT, userPrompt);
+    console.log(`[Quiz] prompt built (${userPrompt.length} chars) — calling Ollama … (+${Date.now() - t0} ms)`);
+
+    // No retries — single attempt only (mcq_generation workflow)
+    const quiz = await callLLM(QUIZ_SYSTEM_PROMPT, userPrompt, {
+      model: model_preference || undefined,
+      rawBypass: !!debug_raw,
+    });
+    console.log(`[Quiz] Ollama returned — total so far ${Date.now() - t0} ms`);
 
     // 4. Persist to DB if user is authenticated
     let savedQuizId = null;
-    if (userId) {
+    if (userId && !debug_raw) {
+      console.log(`[Quiz] saving to DB …`);
       const saved = await saveQuiz(userId, input, quiz);
       savedQuizId = saved.id;
+      console.log(`[Quiz] DB save OK id=${savedQuizId} (+${Date.now() - t0} ms)`);
     }
 
+    console.log(`[Quiz] RESPONSE sent — total ${Date.now() - t0} ms`);
     return res.status(200).json({
       success: true,
       data: { ...quiz, id: savedQuizId },
     });
   } catch (error) {
+    console.error(`[Quiz] ERROR after ${Date.now() - t0} ms — code=${error?.code} msg=${error?.message}`);
+
     if (error?.code === "CONFIG_ERROR") {
-      return res.status(503).json({
+      return res.status(503).json({ success: false, error: error.message });
+    }
+
+    if (error?.code === "TIMEOUT_ERROR") {
+      return res.status(504).json({ success: false, error: "Ollama timed out (>5 min). Check the model/server." });
+    }
+
+    // Fail fast: Ollama returned text that isn't valid JSON
+    if (error?.code === "PARSE_ERROR") {
+      return res.status(502).json({
         success: false,
-        error: error.message,
+        error: `AI returned unparseable output: ${error.message}`,
+        _debug_raw: error.rawResponse?.slice(0, 1000),
       });
     }
 
@@ -114,16 +148,11 @@ router.post("/generate", async (req, res) => {
     }
 
     if (error instanceof SyntaxError) {
-      return res.status(502).json({
-        success: false,
-        error: "AI returned malformed JSON. Please retry.",
-      });
+      return res.status(502).json({ success: false, error: "AI returned malformed JSON. Please retry." });
     }
+
     console.error("[Quiz Generate Error]", error.message);
-    return res.status(500).json({
-      success: false,
-      error: "Failed to generate quiz. Please try again.",
-    });
+    return res.status(500).json({ success: false, error: "Failed to generate quiz. Please try again." });
   }
 });
 

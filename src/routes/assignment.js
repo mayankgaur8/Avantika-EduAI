@@ -1,6 +1,6 @@
 const express = require("express");
 const { z } = require("zod");
-const { callLLM } = require("../claude/client");
+const { callAIPlatform } = require("../services/aiPlatform");
 const { authMiddleware } = require("../middleware/auth");
 const { query } = require("../db/client");
 
@@ -17,30 +17,6 @@ const assignmentSchema = z.object({
   instructions: z.string().optional(),
 });
 
-const ASSIGNMENT_SYSTEM_PROMPT = `You are an expert Indian school teacher creating assignments aligned with CBSE, ICSE, JEE and NEET standards.
-Generate structured assignments with clear instructions, questions with mark allocations, and answer guidelines.
-Output ONLY valid JSON with this structure:
-{
-  "assignment_title": "",
-  "subject": "",
-  "grade": "",
-  "topic": "",
-  "total_marks": 0,
-  "difficulty": "",
-  "instructions": "",
-  "questions": [
-    {
-      "id": 1,
-      "question": "",
-      "marks": 0,
-      "type": "Short Answer | Long Answer | MCQ | Numerical",
-      "options": [],
-      "answer_guideline": "",
-      "hints": ""
-    }
-  ]
-}`;
-
 router.post("/generate", async (req, res) => {
   const parsed = assignmentSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -49,19 +25,21 @@ router.post("/generate", async (req, res) => {
 
   const { subject, topic, grade, marks, difficulty, numberOfQuestions, instructions } = parsed.data;
 
-  const userPrompt = `Generate an assignment with these specifications:
-- Subject: ${subject}
-- Topic: ${topic}
-- Grade: ${grade}
-- Total Marks: ${marks}
-- Difficulty: ${difficulty}
-- Number of Questions: ${numberOfQuestions}
-- Special Instructions: ${instructions || "None"}
-
-Distribute marks proportionally across ${numberOfQuestions} questions. Include answer guidelines.`;
-
   try {
-    const assignment = await callLLM(ASSIGNMENT_SYSTEM_PROMPT, userPrompt);
+    const { data: assignment } = await callAIPlatform({
+      feature: "assignment_generator",
+      prompt: "assignment.generate.v1",
+      input: {
+        subject,
+        topic,
+        grade,
+        difficulty,
+        num_questions: numberOfQuestions,
+        total_marks: marks,
+        special_instructions: instructions || "None",
+      },
+      userId: req.user.id,
+    });
 
     let savedMeta = { id: null, created_at: new Date().toISOString() };
     let saveWarning = null;
@@ -88,18 +66,12 @@ Distribute marks proportionally across ${numberOfQuestions} questions. Include a
     if (err?.code === "CONFIG_ERROR") {
       return res.status(503).json({ success: false, error: err.message });
     }
+    if (err?.code === "TIMEOUT_ERROR") {
+      return res.status(504).json({ success: false, error: "AI generation timed out. Please try again." });
+    }
     if (err?.code === "UPSTREAM_ERROR") {
       console.error("[Assignment Upstream Error]", err.message);
-      return res.status(502).json({
-        success: false,
-        error: "LLM provider request failed. Check provider URL/model and try again.",
-      });
-    }
-    if (err instanceof SyntaxError) {
-      return res.status(502).json({
-        success: false,
-        error: "AI returned malformed JSON. Please retry.",
-      });
+      return res.status(502).json({ success: false, error: "AI platform request failed. Please try again." });
     }
 
     console.error("[Assignment Generate Error]", err.message || err);

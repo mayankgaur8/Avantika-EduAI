@@ -107,7 +107,18 @@ async function ensureTables() {
   }
 }
 
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   console.log(`Avantika EduAI API v2.0 running on port ${PORT}`);
   await ensureTables();
 });
+
+// ── Server-level timeout fix ──────────────────────────────────────────────────
+// Node.js < 13 defaults server.timeout to 120 000 ms (2 min), which kills any
+// socket still open after 2 minutes.  Azure/Nginx upstream sees the closed
+// socket and returns 504.  Ollama with llama3.1 easily takes > 2 min, so the
+// request is always killed before Ollama replies.
+// Setting server.timeout = 0 disables the Node-level socket kill entirely;
+// each route/handler owns its own AbortController timeout instead.
+server.timeout = 0;          // was 120 000 in Node < 13 — THIS was the 504 source
+server.keepAliveTimeout = 65_000;
+server.headersTimeout     = 66_000;
